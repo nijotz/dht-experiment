@@ -32,9 +32,10 @@ class TestNode(unittest.TestCase):
         if numruns < 5:
             self.test_nodes_can_respond_to_pings(numruns=numruns+1)
 
-    def tearDown(self):
+    @classmethod
+    def tearDownClass(cls):
         # TODO: sessions everywhere!
-        self.node1.session.delete(self.node1.node)
-        self.node2.session.delete(self.node2.node)
-        self.node1.stop()
-        self.node2.stop()
+        cls.node1.session.delete(cls.node1.node)
+        cls.node2.session.delete(cls.node2.node)
+        cls.node1.stop()
+        cls.node2.stop()
