@@ -1,12 +1,36 @@
+import json
+import socket
 import unittest 
-from node import DHT
+from node import DHTBase, DHTServer
+
+
+class DHTTest(DHTBase):
+
+    def receive_message(self, message):
+        self._message = message
 
 
 class TestNode(unittest.TestCase):
 
-    def setUp(self):
-        self.node1 = DHT('node1')
-        self.node2 = DHT('node2')
+    # Only setup once (don't create a socket server for every test)
+    @classmethod
+    def setUpClass(cls):
+        cls.node1 = DHTTest('node1', 'localhost', 1111)
+        cls.node2 = DHTTest('node2', 'localhost', 1112)
+        cls.node1.start()
+        cls.node2.start()
 
-    def test_node_can_send(self):
-        self.node1.send_message(self.node2.node.guid, 'Hi node2!')
+
+    def test_nodes_can_listen(self):
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.connect((self.node1.host, self.node1.port))
+        sock.send(json.dumps({'command':'ping'}) + '\n')
+        self.assertTrue(sock.recv(1024) == 'pong')
+
+
+    def tearDown(self):
+        # TODO: sessions everywhere!
+        self.node1.session.delete(self.node1.node)
+        self.node2.session.delete(self.node2.node)
+        self.node1.stop()
+        self.node2.stop()
