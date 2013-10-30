@@ -1,7 +1,7 @@
 import json
 import socket
 import unittest 
-from node import DHTBase, DHTServer
+from node import DHTBase
 
 
 class DHTTest(DHTBase):
@@ -21,12 +21,16 @@ class TestNode(unittest.TestCase):
         cls.node2.start()
 
 
-    def test_nodes_can_listen(self):
+    def test_nodes_can_respond_to_pings(self, numruns=0):
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.connect((self.node1.host, self.node1.port))
         sock.send(json.dumps({'command':'ping'}) + '\n')
         self.assertTrue(sock.recv(1024) == 'pong')
+        sock.close()
 
+        # Try pinging a few times in a row
+        if numruns < 5:
+            self.test_nodes_can_respond_to_pings(numruns=numruns+1)
 
     def tearDown(self):
         # TODO: sessions everywhere!
