@@ -6,9 +6,6 @@ from sqlalchemy.ext.declarative import declarative_base
 Base = declarative_base()
 
 
-# TODO: get database connection from config
-engine = create_engine('postgresql+psycopg2://localhost:5432/parthnode')
-
 def new_uuid():
     return str(uuid4())
 
@@ -20,7 +17,6 @@ class Message(Base):
     sender = Column(String, ForeignKey('node.guid'), nullable=False)
     receiver = Column(String, ForeignKey('node.guid'), nullable=False)
     message = Column(String, nullable=False)
-    received = Column(Boolean)
 
 
 class Node(Base):
@@ -39,6 +35,9 @@ class Share(Base):
     id = Column(Integer, primary_key=True)
     message = Column(String, ForeignKey('message.guid'))
     node = Column(String, ForeignKey('node.guid'))
-    timestamp = Column(DateTime)
+    share_start = Column(DateTime)
+    share_end = Column(DateTime)
 
-Base.metadata.create_all(engine)
+
+def create_schema(engine):
+    Base.metadata.create_all(engine)
