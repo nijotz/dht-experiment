@@ -32,6 +32,15 @@ class TestNode(unittest.TestCase):
         if numruns < 5:
             self.test_nodes_can_respond_to_pings(numruns=numruns+1)
 
+
+    def test_nodes_dont_pong_to_junk(self):
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.connect((self.node1.host, self.node1.port))
+        sock.send(json.dumps({'command':'sup mang?'}) + '\n')
+        self.assertTrue(sock.recv(1024) != 'pong')
+        sock.close()
+
+
     @classmethod
     def tearDownClass(cls):
         # TODO: sessions everywhere!
