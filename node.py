@@ -101,12 +101,16 @@ class DHTBase(object):
 
 
     def handle_request(self, request_handler, data):
-        request = json.loads(data)
-        command = request['command']
-        if command == 'ping':
-            request_handler.request.sendall('pong')
-        else:
-            request_handler.request.sendall('wut')
+        try:
+            request = json.loads(data)
+            command = request['command']
+            if command == 'ping':
+                request_handler.request.sendall('pong')
+            else:
+                request_handler.request.sendall('wut')
+
+        except Exception, e:
+            request_handler.request.sendall(str(e))
 
 
     def start(self):

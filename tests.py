@@ -41,6 +41,14 @@ class TestNode(unittest.TestCase):
         sock.close()
 
 
+    def test_nodes_dont_crash_on_junk(self):
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.connect((self.node1.host, self.node1.port))
+        sock.send('junkgarbagebasura' + '\n')
+        sock.close()
+        self.test_nodes_can_respond_to_pings()
+
+
     @classmethod
     def tearDownClass(cls):
         # TODO: sessions everywhere!
