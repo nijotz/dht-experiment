@@ -39,6 +39,19 @@ class DHTServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
         self.node = node
 
 
+class API(object):
+
+    def __init__(self, node):
+        self.node = node
+        self.methods = {'ping': self.ping}
+
+    def call_method(self, request_handler, command, args):
+        self.methods[command](request_handler, *args)
+
+    def ping(self, request_handler):
+        request_handler.request.sendall('pong')
+
+
 class DHTBase(object):
     """Subclass and extend to become a node"""
 
@@ -69,6 +82,9 @@ class DHTBase(object):
 
         # Setup socket server
         self.setup_server()
+
+        # Setup API class for handling requests
+        self.api = API(self)
 
 
     def setup_server(self):
@@ -104,13 +120,11 @@ class DHTBase(object):
         try:
             request = json.loads(data)
             command = request['command']
-            if command == 'ping':
-                request_handler.request.sendall('pong')
-            else:
-                request_handler.request.sendall('wut')
+            args = getattr(request, 'args', [])
+            self.api.call_method(request_handler, command, args)
 
         except Exception, e:
-            request_handler.request.sendall(str(e))
+            request_handler.request.sendall('{0}: {1}'.format(str(type(e)),  str(e)))
 
 
     def start(self):
