@@ -1,7 +1,9 @@
 import json
 import socket
 import threading
+import traceback
 import SocketServer
+import sys
 from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.sql.expression import ClauseElement
@@ -128,8 +130,11 @@ class DHTBase(object):
             self.api.call_method(request_handler, command, args)
 
         except Exception, e:
-            request_handler.request.sendall('{0}: {1}'.format(str(type(e)),  str(e)))
-
+            (exc_type, exc_value, exc_traceback) = sys.exc_info()
+            tb = traceback.format_exception(exc_type, exc_value,
+                                          exc_traceback)
+            request_handler.request.send('Error handling request: ' + \
+                str(type(e)) + ' - ' + str(e) + ' - ' + repr(tb))
 
     def start(self):
         self.thread.start()
