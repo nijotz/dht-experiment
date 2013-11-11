@@ -84,6 +84,8 @@ class DHTBase(object):
         engine = create_engine('postgresql+psycopg2://localhost:5432/{}'.format(database))
         # TODO: not on init
         create_schema(engine)
+
+        # TODO: Create session in requestHandler?
         Session = sessionmaker(bind=engine)
         self.session = Session()
 
