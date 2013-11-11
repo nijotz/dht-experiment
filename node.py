@@ -1,4 +1,5 @@
 import json
+import socket
 import threading
 import SocketServer
 from sqlalchemy import create_engine, event
@@ -32,8 +33,17 @@ class DHTRequestHandler(SocketServer.StreamRequestHandler):
 class DHTServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
 
     def __init__(self, node, handler_class):
-        SocketServer.TCPServer.__init__(self, (node.host, node.port), handler_class)
+        # False is for bind_and_activate, which will skip the socket bind on
+        # init so that allow_reuse_address can be set on the socket which will
+        # call socket.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1) which avoids
+        # 'Address is already in use' errors when server crashes non-gracefully
+        SocketServer.TCPServer.__init__(self, (node.host, node.port), handler_class, False)
         self.attach_node(node)
+        self.allow_reuse_address = True
+        # The above sets SO_REUSEADDR, but on OSX I need REUSEPORT too
+        self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
+        self.server_bind()
+        self.server_activate()
 
     def attach_node(self, node):
         self.node = node
