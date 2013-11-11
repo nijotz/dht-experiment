@@ -14,7 +14,6 @@ class DHTTest(DHTBase):
 
 class TestNode(unittest.TestCase):
 
-    # Only setup once (don't create a socket server for every test)
     def setUp(self):
         engine = create_engine('postgresql+psycopg2://localhost:5432/postgres')
         self.db_conn = engine.connect()
