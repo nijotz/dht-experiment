@@ -67,11 +67,14 @@ class API(object):
 class DHTBase(object):
     """Subclass and extend to become a node"""
 
-    def __init__(self, name, host, port):
+    def __init__(self, name, host, port, database=None):
+
 
         # Connect to datastore
         # TODO: get from config
-        engine = create_engine('postgresql+psycopg2://localhost:5432/{}'.format(name))
+        if not database:
+            database = name
+        engine = create_engine('postgresql+psycopg2://localhost:5432/{}'.format(database))
         # TODO: not on init
         create_schema(engine)
         Session = sessionmaker(bind=engine)
