@@ -55,13 +55,20 @@ class API(object):
 
     def __init__(self, node):
         self.node = node
-        self.methods = {'ping': self.ping}
+        self.methods = {
+            'ping': self.ping,
+            'sync': self.sync,
+        }
 
     def call_method(self, request_handler, command, args):
         self.methods[command](request_handler, *args)
 
     def ping(self, request_handler):
         request_handler.request.sendall('pong')
+
+    def sync(self, request_handler, guid=None, host=None, port=None):
+        # Try using the host:port of the sender if they don't send info
+        self.node.sync_recv(request_handler)
 
 
 class DHTBase(object):
@@ -110,6 +117,9 @@ class DHTBase(object):
         self.thread.daemon = True
 
     def get_message_listener(self):
+        "Return a callback called when new messages created in the database"
+        # TODO: doesn't necessarily need to be the same process as the node server
+
         def new_message(mapper, connection, target):
             message = target
             if message.receiver == self.node.guid:
@@ -138,6 +148,50 @@ class DHTBase(object):
                                           exc_traceback)
             request_handler.request.send('Error handling request: ' + \
                 str(type(e)) + ' - ' + str(e) + ' - ' + repr(tb))
+
+    def sync_send(self, guid=None, host=None, port=None):
+        "Connect to another node and sync data"
+
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        node = None
+
+        # Try getting connection information using guid
+        if guid is not None:
+            node = self.session.query(Node).filter(guid=guid).all()
+            node_host, node_port = self.node.connection.split(':')
+            node_port = int(self.port)
+            sock.connect((node_host, node_port))
+
+        # If guid is not provided, just use host and port
+        elif host is not None and port is not None:
+            sock.connect((host, port))
+
+        else:
+            # TODO: exception here
+            pass
+
+        sock.send(json.dumps({'command': 'sync'}) + '\n')
+        json_data = json.loads(sock.recv(1024))
+
+        for node_dict in json_data:
+            node = Node(**node_dict)
+            self.session.add(node)
+            self.session.commit()
+
+    def sync_recv(self, request_handler, node=None):
+        "Another node is connecting, share data with the node"
+        # TODO: recieve more than 1024...
+
+        nodes = self.session.query(Node).all()
+        node_data = []
+        for node in nodes:
+            node_dict = {}
+            for column in Node.__table__.columns:
+                node_dict[column.name] = getattr(node, column.name)
+            node_data.append(node_dict)
+        node_json = json.dumps(node_data)
+
+        request_handler.request.sendall(node_json + '\n')
 
     def start(self):
         self.thread.start()
