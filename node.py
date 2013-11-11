@@ -33,6 +33,7 @@ class DHTServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
 
     def __init__(self, node, handler_class):
         SocketServer.TCPServer.__init__(self, (node.host, node.port), handler_class)
+        self.attach_node(node)
 
 
     def attach_node(self, node):
@@ -92,7 +93,6 @@ class DHTBase(object):
         self.host, self.port = self.node.connection.split(':')
         self.port = int(self.port)
         self.server = DHTServer(self, DHTRequestHandler)
-        self.server.attach_node(self)
         self.thread = threading.Thread(target=self.server.serve_forever)
         self.thread.daemon = True
 
