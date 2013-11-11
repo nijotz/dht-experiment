@@ -35,7 +35,6 @@ class DHTServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
         SocketServer.TCPServer.__init__(self, (node.host, node.port), handler_class)
         self.attach_node(node)
 
-
     def attach_node(self, node):
         self.node = node
 
@@ -87,7 +86,6 @@ class DHTBase(object):
         # Setup API class for handling requests
         self.api = API(self)
 
-
     def setup_server(self):
         # TODO: repeat calls should clean up old servers/threads
         self.host, self.port = self.node.connection.split(':')
@@ -96,7 +94,6 @@ class DHTBase(object):
         self.thread = threading.Thread(target=self.server.serve_forever)
         self.thread.daemon = True
 
-
     def get_message_listener(self):
         def new_message(mapper, connection, target):
             message = target
@@ -104,17 +101,14 @@ class DHTBase(object):
                 self.receive_message(message)
         return new_message
 
-
     def receive_message(self, message):
         raise NotImplemented
-
 
     def send_message(self, receiver, message):
         msg = Message(receiver=receiver, message=message)
         msg.sender = self.node.guid
         self.session.add(msg)
         self.session.commit()
-
 
     def handle_request(self, request_handler, data):
         try:
@@ -129,7 +123,6 @@ class DHTBase(object):
 
     def start(self):
         self.thread.start()
-
 
     def stop(self):
         self.server.shutdown()

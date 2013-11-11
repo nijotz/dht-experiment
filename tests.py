@@ -1,6 +1,6 @@
 import json
 import socket
-import unittest 
+import unittest
 from node import DHTBase
 
 
@@ -20,11 +20,10 @@ class TestNode(unittest.TestCase):
         cls.node1.start()
         cls.node2.start()
 
-
     def test_nodes_can_respond_to_pings(self, numruns=0):
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.connect((self.node1.host, self.node1.port))
-        sock.send(json.dumps({'command':'ping'}) + '\n')
+        sock.send(json.dumps({'command': 'ping'}) + '\n')
         self.assertTrue(sock.recv(1024) == 'pong')
         sock.close()
 
@@ -32,14 +31,12 @@ class TestNode(unittest.TestCase):
         if numruns < 5:
             self.test_nodes_can_respond_to_pings(numruns=numruns+1)
 
-
     def test_nodes_dont_pong_to_junk(self):
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.connect((self.node1.host, self.node1.port))
-        sock.send(json.dumps({'command':'sup mang?'}) + '\n')
+        sock.send(json.dumps({'command': 'sup mang?'}) + '\n')
         self.assertTrue(sock.recv(1024) != 'pong')
         sock.close()
-
 
     def test_nodes_dont_crash_on_junk(self):
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
