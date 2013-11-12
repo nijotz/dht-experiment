@@ -2,6 +2,7 @@ from functools import wraps
 import json
 import socket
 from sqlalchemy import create_engine
+import time
 import unittest
 from node import DHTBase
 from models import Message, Node
@@ -67,6 +68,7 @@ class TestNode(unittest.TestCase):
 
     def test_nodes_store_records_of_each_other(self):
         self.node1.sync_with(host=self.node2.host, port=self.node2.port)
+        time.sleep(1)
 
         node2_rows = self.node1.session.query(Node).filter(Node.hashsum == self.node2.node.hashsum).all()
         self.assertTrue(len(node2_rows) != 0)
@@ -76,6 +78,7 @@ class TestNode(unittest.TestCase):
 
     def test_nodes_share_messages(self):
         self.node1.sync_with(host=self.node2.host, port=self.node2.port)
+        time.sleep(1)
 
         msg = Message(sender=self.node2.node.hashsum,
             receiver=self.node1.node.hashsum,
