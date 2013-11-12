@@ -180,10 +180,7 @@ class DHTBase(object):
         sock.close()
 
     def sync_recv(self, sock):
-        """Receive data from another node. Also the method for connecting to
-        another node to receive data. When connecting to another node,
-        sync_send is called after receiving data. Otherwise, just receive
-        data."""
+        "Receive data from another node"
 
         # TODO: recieve more than 1024...
         json_data = json.loads(sock.recv(1024))
@@ -197,7 +194,7 @@ class DHTBase(object):
         self.session.commit()
 
     def sync_send(self, sock, receive_after=True):
-        "Share data with another node, then receive data if flagged to."
+        "Share data with another node, then receive data if flagged to"
 
         sync_data = {}
         for model in self.sync_models:
