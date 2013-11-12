@@ -76,6 +76,8 @@ class DHTBase(object):
 
     def __init__(self, name, host, port, database=None):
 
+        # The models to sync
+        self.sync_models = [Node, Message]
 
         # Connect to datastore TODO: get from config
         if not database:
@@ -188,24 +190,31 @@ class DHTBase(object):
         # TODO: recieve more than 1024...
         json_data = json.loads(sock.recv(1024))
 
-        for node_dict in json_data:
-            node = Node(**node_dict)
-            self.session.add(node)
-            self.session.commit()
+        session = self.Session()
+        for model in self.sync_models:
+            model_data = json_data[model.__name__]
+            for obj_dict in model_data:
+                obj = model(**obj_dict)
+                session.add(obj)
+
+        session.commit()
+        session.close()
 
     def sync_send(self, sock, receive_after=True):
         "Share data with another node, then receive data if flagged to."
 
-        nodes = self.session.query(Node).all()
-        node_data = []
-        for node in nodes:
-            node_dict = {}
-            for column in Node.__table__.columns:
-                node_dict[column.name] = getattr(node, column.name)
-            node_data.append(node_dict)
-        node_json = json.dumps(node_data)
+        sync_data = {}
+        for model in self.sync_models:
+            objects = self.Session().query(model).all()
+            model_data = []
+            for obj in objects:
+                obj_dict = {}
+                for column in model.__table__.columns:
+                    obj_dict[column.name] = getattr(obj, column.name)
+                model_data.append(obj_dict)
+            sync_data[model.__name__] = model_data
 
-        sock.sendall(node_json + '\n')
+        sock.sendall(json.dumps(sync_data) + '\n')
 
         if receive_after:
             self.sync_recv(sock=sock)
