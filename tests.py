@@ -1,9 +1,11 @@
+from datetime import datetime
 from functools import wraps
 import json
+from random import random
 import socket
-from sqlalchemy import create_engine
 import time
 import unittest
+from sqlalchemy import create_engine
 from node import DHTBase
 from models import Message, Node
 
@@ -66,6 +68,7 @@ class TestNode(unittest.TestCase):
         sock.close()
         self.test_nodes_can_respond_to_pings()
 
+    @multiple(2)
     def test_nodes_store_records_of_each_other(self):
         self.node1.sync_with(host=self.node2.host, port=self.node2.port)
         time.sleep(1)
@@ -76,20 +79,21 @@ class TestNode(unittest.TestCase):
         node1_rows = self.node2.session.query(Node).filter(Node.hashsum == self.node1.node.hashsum).all()
         self.assertTrue(len(node1_rows) != 0)
 
+    @multiple(5)
     def test_nodes_share_messages(self):
         self.node1.sync_with(host=self.node2.host, port=self.node2.port)
         time.sleep(1)
 
+        msg_txt = 'test message {0} {1}'.format(datetime.now(), str(random()))
         msg = Message(sender=self.node2.node.hashsum,
             receiver=self.node1.node.hashsum,
-            message='test message')
+            message=msg_txt)
 
         self.node2.session.add(msg)
         self.node2.session.commit()
 
         self.node1.sync_with(host=self.node2.host, port=self.node2.port)
-        node1_msgs = self.node1.session.query(Message).filter(Message.message == 'test message').all()
-
+        node1_msgs = self.node1.session.query(Message).filter(Message.message == msg_txt).all()
         self.assertTrue(len(node1_msgs) != 0)
 
     def tearDown(self):
