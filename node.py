@@ -219,6 +219,6 @@ class DHTBase(object):
         self.thread.start()
 
     def stop(self):
-        self.session.close_all()
+        self.session.close()
         self.session.bind.dispose()
         self.server.shutdown()
