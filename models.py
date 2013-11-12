@@ -23,7 +23,7 @@ class Node(Base):
 
     __tablename__ = 'node'
 
-    guid = Column(String, primary_key=True)
+    guid = Column(String, primary_key=True, default=new_uuid)
     name = Column(String, nullable=False)
     connection = Column(String)
 
