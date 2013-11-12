@@ -68,7 +68,7 @@ class API(object):
 
     def sync(self, request_handler, guid=None, host=None, port=None):
         # Try using the host:port of the sender if they don't send info
-        self.node.sync_recv(request_handler)
+        self.node.sync_send(request_handler.request)
 
 
 class DHTBase(object):
@@ -151,28 +151,44 @@ class DHTBase(object):
             request_handler.request.send('Error handling request: ' + \
                 str(type(e)) + ' - ' + str(e) + ' - ' + repr(tb))
 
-    def sync_send(self, guid=None, host=None, port=None):
-        "Connect to another node and sync data"
+    def get_node_connection(self, sock=None, guid=None, host=None, port=None):
+        if not sock:
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            node = None
 
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        node = None
+            # Try getting connection information using guid
+            if guid is not None:
+                node = self.session.query(Node).filter(guid=guid).all()
+                node_host, node_port = node.connection.split(':')
+                node_port = int(self.port)
+                sock.connect((node_host, node_port))
 
-        # Try getting connection information using guid
-        if guid is not None:
-            node = self.session.query(Node).filter(guid=guid).all()
-            node_host, node_port = self.node.connection.split(':')
-            node_port = int(self.port)
-            sock.connect((node_host, node_port))
+            # If guid is not provided, just use host and port
+            elif host is not None and port is not None:
+                sock.connect((host, port))
 
-        # If guid is not provided, just use host and port
-        elif host is not None and port is not None:
-            sock.connect((host, port))
+            else:
+                # TODO: exception here
+                pass
 
-        else:
-            # TODO: exception here
-            pass
+        return sock
 
+    def sync_with(self, **kwargs):
+        "Initiate a sync with another node"
+
+        sock = self.get_node_connection(**kwargs)
         sock.send(json.dumps({'command': 'sync'}) + '\n')
+        self.sync_recv(sock)
+        self.sync_send(sock, receive_after=False)
+        sock.close()
+
+    def sync_recv(self, sock):
+        """Receive data from another node. Also the method for connecting to
+        another node to receive data. When connecting to another node,
+        sync_send is called after receiving data. Otherwise, just receive
+        data."""
+
+        # TODO: recieve more than 1024...
         json_data = json.loads(sock.recv(1024))
 
         for node_dict in json_data:
@@ -180,9 +196,8 @@ class DHTBase(object):
             self.session.add(node)
             self.session.commit()
 
-    def sync_recv(self, request_handler, node=None):
-        "Another node is connecting, share data with the node"
-        # TODO: recieve more than 1024...
+    def sync_send(self, sock, receive_after=True):
+        "Share data with another node, then receive data if flagged to."
 
         nodes = self.session.query(Node).all()
         node_data = []
@@ -193,7 +208,10 @@ class DHTBase(object):
             node_data.append(node_dict)
         node_json = json.dumps(node_data)
 
-        request_handler.request.sendall(node_json + '\n')
+        sock.sendall(node_json + '\n')
+
+        if receive_after:
+            self.sync_recv(sock=sock)
 
     def start(self):
         self.thread.start()

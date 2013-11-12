@@ -58,9 +58,13 @@ class TestNode(unittest.TestCase):
         self.test_nodes_can_respond_to_pings()
 
     def test_nodes_store_records_of_each_other(self):
-        self.node1.sync_send(host=self.node2.host, port=self.node2.port)
+        self.node1.sync_with(host=self.node2.host, port=self.node2.port)
+
         node2_rows = self.node1.session.query(Node).filter(Node.guid == self.node2.node.guid).all()
         self.assertTrue(len(node2_rows) != 0)
+
+        node1_rows = self.node2.session.query(Node).filter(Node.guid == self.node1.node.guid).all()
+        self.assertTrue(len(node1_rows) != 0)
 
     def tearDown(self):
         self.node1.stop()
