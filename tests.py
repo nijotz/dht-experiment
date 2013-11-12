@@ -1,9 +1,20 @@
+from functools import wraps
 import json
 import socket
 from sqlalchemy import create_engine
 import unittest
 from node import DHTBase
 from models import Message, Node
+
+
+def multiple(num=2):
+    def wrap(fn):
+        @wraps(fn)
+        def wrapper(*args, **kwargs):
+            for i in range(num):
+                fn(*args, **kwargs)
+        return wrapper
+    return wrap
 
 
 class DHTTest(DHTBase):
@@ -32,16 +43,13 @@ class TestNode(unittest.TestCase):
         self.node1.start()
         self.node2.start()
 
-    def test_nodes_can_respond_to_pings(self, numruns=0):
+    @multiple(5)
+    def test_nodes_can_respond_to_pings(self):
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.connect((self.node1.host, self.node1.port))
         sock.send(json.dumps({'command': 'ping'}) + '\n')
         self.assertTrue(sock.recv(1024) == 'pong')
         sock.close()
-
-        # Try pinging a few times in a row
-        if numruns < 5:
-            self.test_nodes_can_respond_to_pings(numruns=numruns+1)
 
     def test_nodes_dont_pong_to_junk(self):
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
