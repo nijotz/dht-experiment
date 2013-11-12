@@ -60,17 +60,17 @@ class TestNode(unittest.TestCase):
     def test_nodes_store_records_of_each_other(self):
         self.node1.sync_with(host=self.node2.host, port=self.node2.port)
 
-        node2_rows = self.node1.session.query(Node).filter(Node.guid == self.node2.node.guid).all()
+        node2_rows = self.node1.session.query(Node).filter(Node.hashsum == self.node2.node.hashsum).all()
         self.assertTrue(len(node2_rows) != 0)
 
-        node1_rows = self.node2.session.query(Node).filter(Node.guid == self.node1.node.guid).all()
+        node1_rows = self.node2.session.query(Node).filter(Node.hashsum == self.node1.node.hashsum).all()
         self.assertTrue(len(node1_rows) != 0)
 
     def test_nodes_share_messages(self):
         self.node1.sync_with(host=self.node2.host, port=self.node2.port)
 
-        msg = Message(sender=self.node2.node.guid,
-            receiver=self.node1.node.guid,
+        msg = Message(sender=self.node2.node.hashsum,
+            receiver=self.node1.node.hashsum,
             message='test message')
 
         self.node2.session.add(msg)

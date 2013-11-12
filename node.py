@@ -66,7 +66,7 @@ class API(object):
     def ping(self, request_handler):
         request_handler.request.sendall('pong')
 
-    def sync(self, request_handler, guid=None, host=None, port=None):
+    def sync(self, request_handler, hashsum=None, host=None, port=None):
         # Try using the host:port of the sender if they don't send info
         self.node.sync_send(request_handler.request)
 
@@ -94,8 +94,6 @@ class DHTBase(object):
         self.node.name = name
         # TODO: get connection from config
         self.node.connection = '{}:{}'.format(host, port)
-        # TODO: get guid from config
-        self.node.guid = name
         self.session.add(self.node)
         self.session.commit()
 
@@ -123,7 +121,7 @@ class DHTBase(object):
 
         def new_message(mapper, connection, target):
             message = target
-            if message.receiver == self.node.guid:
+            if message.receiver == self.node.hashsum:
                 self.receive_message(message)
         return new_message
 
@@ -132,7 +130,7 @@ class DHTBase(object):
 
     def send_message(self, receiver, message):
         msg = Message(receiver=receiver, message=message)
-        msg.sender = self.node.guid
+        msg.sender = self.node.hashsum
         self.session.add(msg)
         self.session.commit()
 
@@ -150,19 +148,19 @@ class DHTBase(object):
             request_handler.request.send('Error handling request: ' + \
                 str(type(e)) + ' - ' + str(e) + ' - ' + repr(tb))
 
-    def get_node_connection(self, sock=None, guid=None, host=None, port=None):
+    def get_node_connection(self, sock=None, hashsum=None, host=None, port=None):
         if not sock:
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             node = None
 
-            # Try getting connection information using guid
-            if guid is not None:
-                node = self.session.query(Node).filter(guid=guid).all()
+            # Try getting connection information using hashsum
+            if hashsum is not None:
+                node = self.session.query(Node).filter(hashsum=hashsum).all()
                 node_host, node_port = node.connection.split(':')
                 node_port = int(self.port)
                 sock.connect((node_host, node_port))
 
-            # If guid is not provided, just use host and port
+            # If hashsum is not provided, just use host and port
             elif host is not None and port is not None:
                 sock.connect((host, port))
 
@@ -190,26 +188,24 @@ class DHTBase(object):
         # TODO: recieve more than 1024...
         json_data = json.loads(sock.recv(1024))
 
-        session = self.Session()
         for model in self.sync_models:
             model_data = json_data[model.__name__]
             for obj_dict in model_data:
                 obj = model(**obj_dict)
-                session.add(obj)
+                self.session.add(obj)
 
-        session.commit()
-        session.close()
+        self.session.commit()
 
     def sync_send(self, sock, receive_after=True):
         "Share data with another node, then receive data if flagged to."
 
         sync_data = {}
         for model in self.sync_models:
-            objects = self.Session().query(model).all()
+            objects = self.session.query(model).all()
             model_data = []
             for obj in objects:
                 obj_dict = {}
-                for column in model.__table__.columns:
+                for column in model.__hashables__:
                     obj_dict[column.name] = getattr(obj, column.name)
                 model_data.append(obj_dict)
             sync_data[model.__name__] = model_data
