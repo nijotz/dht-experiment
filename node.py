@@ -146,7 +146,7 @@ class DHTBase(object):
             tb = traceback.format_exception(exc_type, exc_value,
                                           exc_traceback)
             request_handler.request.send('Error handling request: ' + \
-                str(type(e)) + ' - ' + str(e) + ' - ' + repr(tb))
+                str(type(e)) + ' - ' + str(e) + ' - ' + repr(tb) + '\n')
 
     def get_node_connection(self, sock=None, hashsum=None, host=None, port=None):
         if not sock:
