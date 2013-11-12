@@ -1,5 +1,5 @@
 from uuid import uuid4
-from sqlalchemy import create_engine, Boolean, Column, DateTime, ForeignKey, Integer, String
+from sqlalchemy import Column, DateTime, ForeignKey, Integer, String
 from sqlalchemy.ext.declarative import declarative_base
 
 
