@@ -77,15 +77,12 @@ class DHTBase(object):
     def __init__(self, name, host, port, database=None):
 
 
-        # Connect to datastore
-        # TODO: get from config
+        # Connect to datastore TODO: get from config
         if not database:
             database = name
         engine = create_engine('postgresql+psycopg2://localhost:5432/{}'.format(database))
-        # TODO: not on init
-        create_schema(engine)
+        create_schema(engine) # verify our schema is correct
 
-        # TODO: Create session in requestHandler?
         Session = sessionmaker(bind=engine)
         self.session = Session()
 
