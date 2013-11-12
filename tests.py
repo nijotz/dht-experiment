@@ -3,7 +3,7 @@ import socket
 from sqlalchemy import create_engine
 import unittest
 from node import DHTBase
-from models import Node
+from models import Message, Node
 
 
 class DHTTest(DHTBase):
@@ -65,6 +65,21 @@ class TestNode(unittest.TestCase):
 
         node1_rows = self.node2.session.query(Node).filter(Node.guid == self.node1.node.guid).all()
         self.assertTrue(len(node1_rows) != 0)
+
+    def test_nodes_share_messages(self):
+        self.node1.sync_with(host=self.node2.host, port=self.node2.port)
+
+        msg = Message(sender=self.node2.node.guid,
+            receiver=self.node1.node.guid,
+            message='test message')
+
+        self.node2.session.add(msg)
+        self.node2.session.commit()
+
+        self.node1.sync_with(host=self.node2.host, port=self.node2.port)
+        node1_msgs = self.node1.session.query(Message).filter(Message.message == 'test message')
+
+        self.assertTrue(len(node1_msgs) != 0)
 
     def tearDown(self):
         self.node1.stop()
