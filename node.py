@@ -182,8 +182,11 @@ class DHTBase(object):
     def sync_recv(self, sock):
         "Receive data from another node"
 
-        # TODO: recieve more than 1024...
-        json_data = json.loads(sock.recv(1024))
+        # TODO: this is bad, but good takes time, which I don't have :(
+        data = ''
+        while not data.endswith('\n'):
+            data += sock.recv(1024)
+        json_data = json.loads(data)
 
         for model in self.sync_models:
             model_data = json_data[model.__name__]
