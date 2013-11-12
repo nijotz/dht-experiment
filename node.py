@@ -191,7 +191,7 @@ class DHTBase(object):
         for model in self.sync_models:
             model_data = json_data[model.__name__]
             for obj_dict in model_data:
-                obj = model(**obj_dict)
+                obj, new = get_or_create(self.session, model, defaults=None, **obj_dict)
                 self.session.add(obj)
 
         self.session.commit()
@@ -206,7 +206,7 @@ class DHTBase(object):
             for obj in objects:
                 obj_dict = {}
                 for column in model.__hashables__:
-                    obj_dict[column.name] = getattr(obj, column.name)
+                    obj_dict[column] = getattr(obj, column)
                 model_data.append(obj_dict)
             sync_data[model.__name__] = model_data
 
