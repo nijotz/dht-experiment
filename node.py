@@ -33,7 +33,7 @@ class DHTRequestHandler(SocketServer.StreamRequestHandler):
 
     def handle(self):
         data = self.rfile.readline().strip()
-        self.server.node.handle_request(self, data)
+        self.server.node.api.handle_request(self, data)
 
 
 class DHTServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
@@ -68,6 +68,21 @@ class API(object):
             'ping': self.ping,
             'sync': self.sync,
         }
+
+    def handle_request(self, request_handler, data):
+        try:
+            request = json.loads(data)
+            command = request['command']
+            args = getattr(request, 'args', [])
+            self.call_method(request_handler, command, args)
+
+        except Exception, e:
+            (exc_type, exc_value, exc_traceback) = sys.exc_info()
+            tb = traceback.format_exception(exc_type, exc_value,
+                                            exc_traceback)
+            request_handler.request.send(
+                'Error handling request: ' + str(type(e)) + ' - ' + str(e) +
+                ' - ' + repr(tb) + '\n')
 
     def call_method(self, request_handler, command, args):
         self.methods[command](request_handler, *args)
@@ -142,21 +157,6 @@ class DHTBase(object):
         msg.sender = self.node.hashsum
         self.session.add(msg)
         self.session.commit()
-
-    def handle_request(self, request_handler, data):
-        try:
-            request = json.loads(data)
-            command = request['command']
-            args = getattr(request, 'args', [])
-            self.api.call_method(request_handler, command, args)
-
-        except Exception, e:
-            (exc_type, exc_value, exc_traceback) = sys.exc_info()
-            tb = traceback.format_exception(exc_type, exc_value,
-                                            exc_traceback)
-            request_handler.request.send(
-                'Error handling request: ' + str(type(e)) + ' - ' + str(e) +
-                ' - ' + repr(tb) + '\n')
 
     def get_node_conn(self, sock=None, hashsum=None, host=None, port=None):
         if not sock:
