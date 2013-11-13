@@ -1,7 +1,6 @@
 from datetime import datetime
 from functools import wraps
 import json
-import pep8
 from random import random
 import socket
 import time
@@ -123,6 +122,31 @@ class TestNode(unittest.TestCase):
 class TestCodeFormat(unittest.TestCase):
 
     def test_pep8_compliance(self):
+        import pep8
         pep8test = pep8.StyleGuide(quiet=True)
         result = pep8test.check_files(['node.py', 'tests.py', 'models.py'])
         self.assertEqual(result.total_errors, 0)
+
+    def test_pyflakes_compliance(self):
+        from pyflakes import reporter
+        from pyflakes import api
+
+        class PyflakesReporter(reporter.Reporter):
+            def __init__(self, *args, **kwargs):
+                self.error = False
+
+            def unexpectedError(self, *args, **kwargs):
+                self.error = True
+
+            def syntaxError(self, *args, **kwargs):
+                self.error = True
+
+            def flake(self, *args, **kwargs):
+                self.error = True
+
+        import os
+        path = os.path.dirname(os.path.realpath(__file__))
+
+        reporter = PyflakesReporter()
+        api.checkRecursive([path], reporter)
+        self.assertEqual(reporter.error, False)
