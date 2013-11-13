@@ -1,6 +1,7 @@
 from datetime import datetime
 from functools import wraps
 import json
+import pep8
 from random import random
 import socket
 import time
@@ -32,7 +33,7 @@ class TestNode(unittest.TestCase):
         engine = create_engine('postgresql+psycopg2://localhost:5432/postgres')
         self.db_conn = engine.connect()
 
-        #postgres doesn't allow create db inside a transaction, commits end them
+        # postgres doesn't allow createdb inside transactions, commit to end
         self.db_conn.execute("commit")
         self.db_conn.execute("create database test_node1")
         self.db_conn.execute("commit")
@@ -41,8 +42,8 @@ class TestNode(unittest.TestCase):
         self.db_conn.execute("create database test_node2")
         self.db_conn.execute("commit")
 
-        self.node1 = DHTTest('node1', 'localhost', 1111, database='test_node1')
-        self.node2 = DHTTest('node2', 'localhost', 1112, database='test_node2')
+        self.node1 = DHTTest('node1', 'localhost', 1111, 'test_node1')
+        self.node2 = DHTTest('node2', 'localhost', 1112, 'test_node2')
         self.node1.start()
         self.node2.start()
 
@@ -73,10 +74,12 @@ class TestNode(unittest.TestCase):
         self.node1.sync_with(host=self.node2.host, port=self.node2.port)
         time.sleep(1)
 
-        node2_rows = self.node1.session.query(Node).filter(Node.hashsum == self.node2.node.hashsum).all()
+        node2_rows = self.node1.session.query(Node).filter(
+            Node.hashsum == self.node2.node.hashsum).all()
         self.assertTrue(len(node2_rows) != 0)
 
-        node1_rows = self.node2.session.query(Node).filter(Node.hashsum == self.node1.node.hashsum).all()
+        node1_rows = self.node2.session.query(Node).filter(
+            Node.hashsum == self.node1.node.hashsum).all()
         self.assertTrue(len(node1_rows) != 0)
 
     @multiple(5)
@@ -86,15 +89,16 @@ class TestNode(unittest.TestCase):
 
         msg_txt = 'test message {0} {1}'.format(datetime.now(), str(random()))
         msg = Message(sender=self.node2.node.hashsum,
-            receiver=self.node1.node.hashsum,
-            message=msg_txt)
+                      receiver=self.node1.node.hashsum,
+                      message=msg_txt)
 
         self.node2.session.add(msg)
         self.node2.session.commit()
 
         self.node1.sync_with(host=self.node2.host, port=self.node2.port)
         time.sleep(1)
-        node1_msgs = self.node1.session.query(Message).filter(Message.message == msg_txt).all()
+        node1_msgs = self.node1.session.query(Message).filter(
+            Message.message == msg_txt).all()
         self.assertTrue(len(node1_msgs) != 0)
 
     def tearDown(self):
@@ -114,3 +118,11 @@ class TestNode(unittest.TestCase):
             print e
 
         self.db_conn.close()
+
+
+class TestCodeFormat(unittest.TestCase):
+
+    def test_pep8_compliance(self):
+        pep8test = pep8.StyleGuide(quiet=True)
+        result = pep8test.check_files(['node.py', 'tests.py', 'models.py'])
+        self.assertEqual(result.total_errors, 0)
