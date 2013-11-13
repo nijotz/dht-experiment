@@ -10,14 +10,17 @@ from sqlalchemy.sql.expression import ClauseElement
 from models import Message, Node, create_schema
 
 
-# From http://stackoverflow.com/questions/2546207/does-sqlalchemy-have-an-equivalent-of-djangos-get-or-create
-# with modifications
 def get_or_create(session, model, defaults=None, **kwargs):
+    """From stackoverflow, with modifications. Create an object if it doesn't
+    exist, select it if it does."""
+
     instance = session.query(model).filter_by(**kwargs).first()
     if instance:
         return instance, False
     else:
-        params = dict((k, v) for k, v in kwargs.iteritems() if not isinstance(v, ClauseElement))
+        params = dict(
+            (k, v) for k, v in kwargs.iteritems()
+            if not isinstance(v, ClauseElement))
         if defaults is not None:
             params.update(defaults)
         instance = model(**params)
@@ -26,6 +29,7 @@ def get_or_create(session, model, defaults=None, **kwargs):
 
 
 class DHTRequestHandler(SocketServer.StreamRequestHandler):
+    "New instances are created for each connection"
 
     def handle(self):
         data = self.rfile.readline().strip()
@@ -33,16 +37,20 @@ class DHTRequestHandler(SocketServer.StreamRequestHandler):
 
 
 class DHTServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
+    """Threaded TCP Server. A DHT is composed of this server, with
+    requests handled by DHTRequestHandler"""
 
     def __init__(self, node, handler_class):
         # False is for bind_and_activate, which will skip the socket bind on
         # init so that allow_reuse_address can be set on the socket which will
         # call socket.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1) which avoids
         # 'Address is already in use' errors when server crashes non-gracefully
-        SocketServer.TCPServer.__init__(self, (node.host, node.port), handler_class, False)
+        SocketServer.TCPServer.__init__(
+            self, (node.host, node.port), handler_class,
+            bind_and_activate=False)
         self.attach_node(node)
         self.allow_reuse_address = True
-        # The above sets SO_REUSEADDR, but on OSX I need REUSEPORT too
+        # The above sets SO_REUSEADDR, but on OSX I needed REUSEPORT too
         self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
         self.server_bind()
         self.server_activate()
@@ -52,6 +60,7 @@ class DHTServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
 
 
 class API(object):
+    "A class to contain the commands that can be sent betwen servers."
 
     def __init__(self, node):
         self.node = node
@@ -72,7 +81,8 @@ class API(object):
 
 
 class DHTBase(object):
-    """Subclass and extend to become a node"""
+    """Subclass and extend to become a node.  'receive_message' needs to be
+    overridden to handle messages received by this node."""
 
     def __init__(self, name, host, port, database=None):
 
@@ -82,8 +92,9 @@ class DHTBase(object):
         # Connect to datastore TODO: get from config
         if not database:
             database = name
-        engine = create_engine('postgresql+psycopg2://localhost:5432/{}'.format(database))
-        create_schema(engine) # verify our schema is correct
+        connect_str = 'postgresql+psycopg2://localhost:5432/{}'
+        engine = create_engine(connect_str.format(database))
+        create_schema(engine)  # verify our schema is correct
 
         Session = sessionmaker(bind=engine)
         self.session = Session()
@@ -98,7 +109,6 @@ class DHTBase(object):
         self.session.commit()
 
         # Setup listening for new messages being committed to the database
-        # TODO: probably won't work multithreaded, need just one thread doing this
         event.listen(Message, 'after_insert', self.get_message_listener())
 
         # Setup socket server
@@ -117,7 +127,6 @@ class DHTBase(object):
 
     def get_message_listener(self):
         "Return a callback called when new messages created in the database"
-        # TODO: doesn't necessarily need to be the same process as the node server
 
         def new_message(mapper, connection, target):
             message = target
@@ -144,11 +153,12 @@ class DHTBase(object):
         except Exception, e:
             (exc_type, exc_value, exc_traceback) = sys.exc_info()
             tb = traceback.format_exception(exc_type, exc_value,
-                                          exc_traceback)
-            request_handler.request.send('Error handling request: ' + \
-                str(type(e)) + ' - ' + str(e) + ' - ' + repr(tb) + '\n')
+                                            exc_traceback)
+            request_handler.request.send(
+                'Error handling request: ' + str(type(e)) + ' - ' + str(e) +
+                ' - ' + repr(tb) + '\n')
 
-    def get_node_connection(self, sock=None, hashsum=None, host=None, port=None):
+    def get_node_conn(self, sock=None, hashsum=None, host=None, port=None):
         if not sock:
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             node = None
@@ -173,7 +183,7 @@ class DHTBase(object):
     def sync_with(self, **kwargs):
         "Initiate a sync with another node"
 
-        sock = self.get_node_connection(**kwargs)
+        sock = self.get_node_conn(**kwargs)
         sock.send(json.dumps({'command': 'sync'}) + '\n')
         self.sync_recv(sock)
         self.sync_send(sock, receive_after=False)
@@ -191,7 +201,8 @@ class DHTBase(object):
         for model in self.sync_models:
             model_data = json_data[model.__name__]
             for obj_dict in model_data:
-                obj, new = get_or_create(self.session, model, defaults=None, **obj_dict)
+                obj, new = get_or_create(
+                    self.session, model, defaults=None, **obj_dict)
                 self.session.add(obj)
 
         self.session.commit()

@@ -93,6 +93,7 @@ class TestNode(unittest.TestCase):
         self.node2.session.commit()
 
         self.node1.sync_with(host=self.node2.host, port=self.node2.port)
+        time.sleep(1)
         node1_msgs = self.node1.session.query(Message).filter(Message.message == msg_txt).all()
         self.assertTrue(len(node1_msgs) != 0)
 
